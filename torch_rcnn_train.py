@@ -1,11 +1,11 @@
-from depth_mask.engine import train_one_epoch, evaluate
+from maskrcnn_training.engine import train_one_epoch, evaluate
 import torch
 import os
-from depth_mask.torchdataset import SdMaskDataSet
-from depth_mask.sd_model import get_transform, get_model_instance_segmentation
-from depth_mask import utils
+from maskrcnn_training.torchdataset import SdMaskDataSet
+from maskrcnn_training.sd_model import get_transform, get_model_instance_segmentation
+from maskrcnn_training import utils
 
-save_model_dir = 'pytorch_sdrcnn_cocoeval2'
+save_model_dir = 'save_file_dir/pytorch_sdrcnn_cocoeval2'
 if not os.path.exists(save_model_dir):
     os.mkdir(save_model_dir)
 

@@ -1,7 +1,7 @@
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
-import transforms as T
+import maskrcnn_training.transforms as T
 
 def get_transform(train):
     transforms = []

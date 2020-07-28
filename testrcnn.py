@@ -4,10 +4,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-from depth_mask.engine import train_one_epoch, evaluate
-from depth_mask.torchdataset import SdMaskDataSet
-from depth_mask.sd_model import get_transform, get_model_instance_segmentation
-import depth_mask.utils
+from maskrcnn_training.engine import train_one_epoch, evaluate
+from maskrcnn_training.torchdataset import SdMaskDataSet
+from maskrcnn_training.sd_model import get_transform, get_model_instance_segmentation
+import maskrcnn_training.utils
 from PIL import Image
 
 def random_colour_masks(image):
