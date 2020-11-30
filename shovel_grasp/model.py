@@ -108,7 +108,7 @@ class ResModel(nn.Module):
     def forward(self, x):
         return self.resnet(x)
 
-
+# ====== Visual Affordance Network ======
 class RotModelRes(nn.Module):
     def __init__(self, device, in_channel=4):
         super(RotModelRes, self).__init__()
@@ -134,13 +134,19 @@ class RotModelRes(nn.Module):
                     m[1].weight.data.fill_(1)
                     m[1].bias.data.zero_()
 
-    def forward(self, input_img, rot_idx=0):
+    def forward(self,
+                input_img,
+                rot_idx=0,
+                num_rotation=3,
+                rotation_range=90.):
         """
         :param input_img: (3, 300, 300)
         :param rot_idx: evenly divide pi
+        :param num_rotation: total number of rotation discretization
+        :param rotation_range: total range of manipulation angles
         """
         # print('Res Forward')
-        rot_theta = np.radians(rot_idx * 45.)
+        rot_theta = np.radians(rotation_range * rot_idx / (num_rotation-1))
         affine_mat_before = np.asarray([[np.cos(-rot_theta), np.sin(-rot_theta), 0],
                                         [-np.sin(-rot_theta), np.cos(-rot_theta), 0]])
         affine_mat_before.shape = (2, 3, 1)

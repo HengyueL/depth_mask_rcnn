@@ -27,31 +27,97 @@ class Robot(object):
         self.plane_home = np.asarray(self.workspace_center)
 
         self.shovel_height = 0.06
-        self.shovel_ori = np.asarray([np.deg2rad(360.-115.),
-                                      np.deg2rad(360.),
-                                      np.deg2rad(90.+360.)])  # For target Handle
-        self.shovel_ori2 = np.asarray([np.deg2rad(-115.+360.),
-                                      np.deg2rad(360.),
-                                      np.deg2rad(90.)])
-        self.grasp_ori = np.asarray([-np.pi, 0., np.pi/2])  # Grasp target Ori (for gripper rotation = 0)
+        # ----- Action rot angle dictionary -------
+        # ----- The angle values cannot be changed arbitrarily (e.g. 450.) Due to Vrep Stability Issue
+        self.shovel_angle = {}
+        self.shovel_angle['360'] = np.asarray([np.deg2rad(245.),
+                                             np.deg2rad(360.),
+                                             np.deg2rad(450.)])
+        self.shovel_angle['0'] = np.asarray([np.deg2rad(-115.),
+                                             np.deg2rad(0.),
+                                             np.deg2rad(90.)])
+        self.shovel_angle['5'] = np.asarray([np.deg2rad(360. - 115.),
+                                             np.deg2rad(-4.5),
+                                             np.deg2rad(87.9)])
+        self.shovel_angle['10'] = np.asarray([np.deg2rad(360. - 115.3),
+                                             np.deg2rad(-9.05),
+                                             np.deg2rad(85.7)])
+        self.shovel_angle['15'] = np.asarray([np.deg2rad(360.-116.),
+                                              np.deg2rad(-13.6),
+                                              np.deg2rad(83.5)])
+        self.shovel_angle['20'] = np.asarray([np.deg2rad(360. - 116.4),
+                                              np.deg2rad(-18.1),
+                                             np.deg2rad(81.28)])
+        self.shovel_angle['25'] = np.asarray([np.deg2rad(360. - 117.23),
+                                              np.deg2rad(-22.52),
+                                              np.deg2rad(78.85)])
+        self.shovel_angle['30'] = np.asarray([np.deg2rad(360.-118.3),
+                                              np.deg2rad(-27.),
+                                              np.deg2rad(76.3)])
+        self.shovel_angle['35'] = np.asarray([np.deg2rad(360. - 119.65),
+                                              np.deg2rad(-31.32),
+                                              np.deg2rad(73.52)])
+        self.shovel_angle['40'] = np.asarray([np.deg2rad(360. - 121.33),
+                                              np.deg2rad(-35.63),
+                                              np.deg2rad(70.47)])
+        self.shovel_angle['45'] = np.asarray([np.deg2rad(360.-123.5),
+                                              np.deg2rad(-40.),
+                                              np.deg2rad(67.)])
+        self.shovel_angle['50'] = np.asarray([np.deg2rad(360. - 125.96),
+                                              np.deg2rad(-43.97),
+                                              np.deg2rad(63.27)])
+        self.shovel_angle['55'] = np.asarray([np.deg2rad(360. - 129.11),
+                                              np.deg2rad(-47.94),
+                                              np.deg2rad(58.9)])
+        self.shovel_angle['60'] = np.asarray([np.deg2rad(360.-133.0),
+                                              np.deg2rad(-51.7),
+                                              np.deg2rad(53.8)])
+        self.shovel_angle['65'] = np.asarray([np.deg2rad(360. - 137.81),
+                                              np.deg2rad(-55.22),
+                                              np.deg2rad(47.81)])
+        self.shovel_angle['70'] = np.asarray([np.deg2rad(360. - 143.74),
+                                              np.deg2rad(-58.39),
+                                              np.deg2rad(40.74)])
+        self.shovel_angle['75'] = np.asarray([np.deg2rad(360.-151.),
+                                              np.deg2rad(-61.),
+                                              np.deg2rad(32.4)])
+        self.shovel_angle['80'] = np.asarray([np.deg2rad(360. - 159.58),
+                                              np.deg2rad(-63.2),
+                                              np.deg2rad(22.65)])
+        self.shovel_angle['85'] = np.asarray([np.deg2rad(360. - 169.41),
+                                              np.deg2rad(-64.5),
+                                              np.deg2rad(11.7)])
+        self.shovel_angle['90'] = np.asarray([np.deg2rad(180.),
+                                              np.deg2rad(-65.),
+                                              np.deg2rad(0.)])
+        self.shovel_angle['180'] = np.asarray([np.deg2rad(245.),
+                                               np.deg2rad(360.),
+                                               np.deg2rad(90.)])
 
-        self.wall_handles = []   # A list of all wall handles
+        self.grasp_ori = np.asarray([-np.pi, 0., np.pi/2])  # Grasp target Ori (for gripper rotation = 0)
+        # ==== Lists for all added object handles
+        self.wall_handles = []
         self.target_handles = []
         self.plane_handles = []
         self.disturb_handles = []
 
         # Read files in object mesh directory
         self.obj_root_dir = obj_root_dir
-        # ==== To Do ===
+        # ==== Objects Directories ====
         self.target_obj_dir = os.path.join(self.obj_root_dir, 'obj')
         self.disturb_obj_dir = os.path.join(self.obj_root_dir, 'disturbs')
         self.wall_dir = os.path.join(self.obj_root_dir, 'walls')
         self.plane_dir = os.path.join(self.obj_root_dir, 'planes')
+        self.ycb_dir = os.path.join(self.obj_root_dir, 'YCB')
 
-        self.target_file_list = [f for f in os.listdir(self.target_obj_dir) if os.path.isfile(os.path.join(self.target_obj_dir, f))]
+        # This target_file_list is used only for siamese data collection
+        self.target_file_list = [f for f in os.listdir(self.target_obj_dir) if (os.path.isfile(os.path.join(self.target_obj_dir, f)) and ('block' in f))]
+        # self.target_file_list = [f for f in os.listdir(self.target_obj_dir) if os.path.isfile(os.path.join(self.target_obj_dir, f))]
         self.disturb_file_list = [f for f in os.listdir(self.disturb_obj_dir) if os.path.isfile(os.path.join(self.disturb_obj_dir, f))]
         self.wall_file_list = [f for f in os.listdir(self.wall_dir) if os.path.isfile(os.path.join(self.wall_dir, f))]
         self.plane_file_list = [f for f in os.listdir(self.plane_dir) if os.path.isfile(os.path.join(self.plane_dir, f))]
+        self.ycb_file_list = [f for f in os.listdir(self.ycb_dir) if os.path.isfile(os.path.join(self.ycb_dir, f))]
+        self.ycb_file_list.sort()
 
         # Connect to simulator
         vrep.simxFinish(-1)  # Just in case, close all opened connections
@@ -91,30 +157,34 @@ class Robot(object):
         self.cam_depth_scale = 1
 
     def add_target(self):
-        self.add_object(add_obj_position=self.target_home,
-                        pos_noise_level=0.1,
-                        obj_type='target'
-                        )
-        position = np.asarray(self.wall_home).copy()
-        # position[1] -= 0.06
-        # self.add_object(add_obj_position=self.workspace_center,
-        #                 pos_noise_level=0.1,
-        #                 obj_type='target'
-        #                 )
+        # handle = self.add_object(add_obj_position=self.target_home,
+        #                          pos_noise_level=0.1,
+        #                          obj_type='target')
+        position = np.asarray(self.workspace_center).copy()
+        position[1] -= 0.09
+        position[2] = 0.05
+        handle = self.add_object(add_obj_position=position,
+                                 pos_noise_level=0.0,
+                                 obj_type='target')
         # return position
+        return handle
 
     def add_wall(self):
         orientation = np.asarray([0,
                                   0,
                                   2 * np.pi * np.random.random_sample()])
-        self.add_object(add_obj_position=self.wall_home,
-                        pos_noise_level=0.05,
-                        obj_orientation=orientation,
-                        obj_type='wall')
-        # self.add_object(add_obj_position=self.workspace_center,
-        #                 pos_noise_level=0.1,
-        #                 obj_orientation=orientation,
-        #                 obj_type='wall')
+        # handle = self.add_object(add_obj_position=self.wall_home,
+        #                          pos_noise_level=0.05,
+        #                          obj_orientation=orientation,
+        #                          obj_type='wall')
+        # orientation = np.asarray([0,
+        #                           0,
+        #                           0.5 * np.pi])
+        handle = self.add_object(add_obj_position=self.workspace_center,
+                                 pos_noise_level=0.0,
+                                 obj_orientation=orientation,
+                                 obj_type='wall')
+        return handle
 
     def add_plane(self):
         # orientation = np.asarray([0., 0., 0.])
@@ -125,17 +195,27 @@ class Robot(object):
         pass
 
     def add_disturb(self):
-        self.add_object(add_obj_position=self.disturb_home,
-                        pos_noise_level=0.1,
-                        obj_type='disturb')
-        # self.add_object(add_obj_position=self.workspace_center,
-        #                 pos_noise_level=0.1,
-        #                 obj_type='disturb')
+        # handle = self.add_object(add_obj_position=self.disturb_home,
+        #                          pos_noise_level=0.1,
+        #                          obj_type='disturb')
+        handle = self.add_object(add_obj_position=self.workspace_center,
+                                 pos_noise_level=0.05,
+                                 obj_type='disturb')
+        return handle
+
+    def add_ycb(self, ycb_idx=0):
+        position = np.asarray(self.workspace_center)
+        position[2] = 0.25
+        return self.add_object(add_obj_position=position,
+                               pos_noise_level=0.05,
+                               obj_type='ycb',
+                               ycb_idx=ycb_idx)[:-4]
 
     def add_object(self, add_obj_position,
                    pos_noise_level=-1.,
                    obj_orientation=None,
-                   obj_type=None):
+                   obj_type=None,
+                   ycb_idx=0):
         if obj_type == 'target':
             add_obj_list = self.target_handles
             obj_idx = np.random.randint(0, len(self.target_file_list))
@@ -152,6 +232,11 @@ class Robot(object):
             add_obj_list = self.plane_handles
             obj_idx = np.random.randint(0, len(self.plane_file_list))
             add_file = os.path.join(self.plane_dir, self.plane_file_list[obj_idx])
+        elif obj_type == 'ycb':
+            add_obj_list = self.disturb_handles
+            obj_idx = ycb_idx
+            file_name = self.ycb_file_list[obj_idx]
+            add_file = os.path.join(self.ycb_dir, file_name)
         else:
             print('Invalid Obj Type')
             return
@@ -169,6 +254,10 @@ class Robot(object):
         self.set_single_obj_position(obj_handle, position)
         add_obj_list.append(obj_handle)
         time.sleep(0.5)
+        if obj_type == 'ycb':
+            return file_name
+        else:
+            return obj_handle
 
     def restart_sim(self):
         self.stop_sim()
@@ -176,8 +265,10 @@ class Robot(object):
                                                                    vrep.simx_opmode_blocking)
         vrep.simxSetObjectPosition(self.sim_client, self.UR5_target_handle, -1, self.home_pos,
                                    vrep.simx_opmode_blocking)
-        vrep.simxSetObjectOrientation(self.sim_client, self.UR5_target_handle, -1,
-                                      self.shovel_ori, vrep.simx_opmode_blocking)
+        vrep.simxSetObjectOrientation(self.sim_client,
+                                      self.UR5_target_handle, -1,
+                                      self.shovel_angle['0'],
+                                      vrep.simx_opmode_blocking)
 
         vrep.simxStopSimulation(self.sim_client, vrep.simx_opmode_blocking)
         vrep.simxStartSimulation(self.sim_client, vrep.simx_opmode_blocking)
@@ -353,100 +444,74 @@ class Robot(object):
         time.sleep(0.05)
 
     # This function rotates the shovel action to be 90 deg (hard code, don't ask)
-    def shovel_rot(self, mode=0):
-        """ mode=90:   to 90 deg rotation
-            mode=45,   to 45 deg rotation
-            mode=0     to 0 deg rotation """
+    def shovel_rot(self, mode='0'):
+        """ mode='d'   Browse Dictionary to see the desired gripper angle """
         UR5_target_orientation = self.get_single_obj_orientations(self.UR5_target_handle)
-        if mode == 0:
-            target_ori = self.shovel_ori  # 0 deg rotation
-
-        elif mode == 90:
-            target_ori = np.asarray([np.deg2rad(180.),
-                                     np.deg2rad(-65.),
-                                     np.deg2rad(0.)])  # 90 deg rotation
-        elif mode == 180:
-            target_ori = self.shovel_ori2
-        else:
-            target_ori = np.asarray([np.deg2rad(360.-123.5),
-                                     np.deg2rad(-40.),
-                                     np.deg2rad(67.)])
-
+        target_ori = self.shovel_angle[mode]
         ori_direction = np.asarray([target_ori[0] - UR5_target_orientation[0],
                                     target_ori[1] - UR5_target_orientation[1],
                                     target_ori[2] - UR5_target_orientation[2]])
+        rot_angle = int(mode)
+        # ===== The following Code is to ensure Vrep motion stability
+        if rot_angle != 0:
+            if rot_angle < 6:
+                num_move_step = 25
+            elif rot_angle > 90:
+                num_move_step = 25
+            else:
+                num_move_step = int(rot_angle / 5)
+            ori_move_step = ori_direction/num_move_step
+            for step_iter in range(num_move_step):
+                vrep.simxSetObjectOrientation(self.sim_client,
+                                              self.UR5_target_handle,
+                                              -1,
+                                              (UR5_target_orientation[0]+ori_move_step[0],
+                                               UR5_target_orientation[1]+ori_move_step[1],
+                                               UR5_target_orientation[2]+ori_move_step[2]),
+                                              vrep.simx_opmode_blocking)
 
-        num_move_step = 30
-        # pos_move_step = pos_direction/num_move_step
-        ori_move_step = ori_direction/num_move_step
-
-        for step_iter in range(num_move_step):
+                sim_ret, UR5_target_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.UR5_target_handle,
+                                                                                -1,
+                                                                                vrep.simx_opmode_blocking)
             vrep.simxSetObjectOrientation(self.sim_client,
                                           self.UR5_target_handle,
                                           -1,
-                                          (UR5_target_orientation[0]+ori_move_step[0],
-                                           UR5_target_orientation[1]+ori_move_step[1],
-                                           UR5_target_orientation[2]+ori_move_step[2]),
+                                          (UR5_target_orientation[0] + ori_move_step[0],
+                                           UR5_target_orientation[1] + ori_move_step[1],
+                                           UR5_target_orientation[2] + ori_move_step[2]),
                                           vrep.simx_opmode_blocking)
-
-            sim_ret, UR5_target_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.UR5_target_handle,
-                                                                            -1,
-                                                                            vrep.simx_opmode_blocking)
-        vrep.simxSetObjectOrientation(self.sim_client,
-                                      self.UR5_target_handle,
-                                      -1,
-                                      (UR5_target_orientation[0] + ori_move_step[0],
-                                       UR5_target_orientation[1] + ori_move_step[1],
-                                       UR5_target_orientation[2] + ori_move_step[2]),
-                                      vrep.simx_opmode_blocking)
 
     def shovel(self, position, rotation_angle):
         """ If prev_action == 'grasp', the gripper should first rotate to a shovel position"""
-        # print('Shovel Command at (%f, %f, %f)' % (position[0], position[1], position[2]))
-
         if position[2] > 0.15:  # criterion for safety
             print('Shovel on the obstacle should be avoided! ')
             return False
-
-        # determine shovel direction
-        if rotation_angle > 60:
-            self.shovel_rot(mode=90)
-            shovel_direction = np.asarray([-0.07,
-                                           0.0,
-                                           0.0])
-        elif rotation_angle > 30:
-            self.shovel_rot(mode=45)
-            shovel_direction = np.asarray([-0.05,
-                                           0.05,
-                                           0.0])
-        else:
-            shovel_direction = np.asarray([0.0,
-                                           0.07,
-                                           0.0])
+        rot_key = str(int(rotation_angle))
+        self.shovel_rot(mode=rot_key)
+        shovel_direction = np.asarray([-0.07 * np.sin(np.deg2rad(rotation_angle)),
+                                       0.07 * np.cos(np.deg2rad(rotation_angle)),
+                                       0.0])
         print('Shovel Direction: %04f' % rotation_angle)
 
         position_shovel = np.asarray(position).copy()
         position_shovel[1] = position_shovel[1]
+        position_shovel[1] = position_shovel[1]
         position_shovel[2] = self.shovel_height
-
         shovel_start_pos = position_shovel - shovel_direction
-
-        shovel_location_margin = 0.3
+        shovel_location_margin = 0.25
         location_above_target = shovel_start_pos.copy()
         location_above_target[2] = location_above_target[2] + shovel_location_margin
-
         location_above_end = position_shovel.copy()
         location_above_end[2] = location_above_end[2] + shovel_location_margin
         print('Executing: shovel at (%f, %f, %f)' % (position_shovel[0], position_shovel[1], position_shovel[2]))
 
         # Sequential Actions
-        # self.move_linear(location_above_target)
         self.move_linear(shovel_start_pos)
         self.move_linear(position_shovel)
-        # _ = self.close_RG2_gripper_slow()
         _ = self.close_RG2_gripper()
         time.sleep(0.5)
         self. move_linear(location_above_end)
+
         # re-set default pose
         self.move_linear(self.home_pos)
         time.sleep(0.4)
@@ -455,22 +520,19 @@ class Robot(object):
         gripper_full_closed = self.close_RG2_gripper()
         object_position = self.get_single_obj_position(self.target_handles[0])
         grasp_success = not gripper_full_closed and object_position[2] > 0.2
-
-        # Move the grasped object elsewhere
-        # sim_ok = self.check_sim()
-        # if not sim_ok:
-        #     return False
         if grasp_success:
             self.remove_object(object_handle=self.target_handles[0],
                                obj_handle_list=self.target_handles)
         self.open_RG2_gripper()
-
-        if 30 < rotation_angle < 60:
+        # These reset values need to verify through v-rep simulation
+        # There may be only one correspondence for one v-rep version
+        if rot_key == '90':
             # rotate back to shovel home orientation
-            self.shovel_rot(mode=180)
-        elif rotation_angle > 60:
-            self.shovel_rot(mode=0)
-
+            self.shovel_rot(mode='360')
+        elif rot_key == '0':
+            pass
+        else:
+            self.shovel_rot(mode='180')
         return grasp_success
 
     def remove_object(self, object_handle, obj_handle_list):

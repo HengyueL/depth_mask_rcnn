@@ -10,11 +10,14 @@ class TrainerDQN(object):
     def __init__(self,
                  action_space_size,
                  future_reward_discount,
-                 save_model_dir=None):
+                 save_model_dir=None,
+                 num_of_rotation=3,
+                 rotation_range=90.):
 
         self.action_space_size = action_space_size
         self.iteration = 0
-        self.num_of_rotation = 3  # 0, 45, 90 3-angle motion primitives
+        self.num_of_rotation = num_of_rotation
+        self.rotation_range = rotation_range
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         self.shovel_model = RotModelRes(self.device).to(self.device)
@@ -22,12 +25,14 @@ class TrainerDQN(object):
 
         # Load pre-trained model
         if save_model_dir is not None:
-            pre_trained_model = os.path.join(save_model_dir,
-                                             '1160_shovel_DQN_model.pth')
+            # pre_trained_model = os.path.join(save_model_dir,
+            #                                  '4900_shovel_DQN_model.pth')
+            pre_trained_model = save_model_dir
             if os.path.exists(pre_trained_model):
                 #  Change the path here if the continue training
                 self.shovel_model.load_state_dict(torch.load(pre_trained_model))
-                print('Pre-trained model loaded')
+                print('Pre-trained model loaded: ')
+                print(pre_trained_model)
 
         self.future_reward_discount = future_reward_discount
         self.criterion = torch.nn.SmoothL1Loss().to(self.device)  # Huber loss
@@ -45,6 +50,7 @@ class TrainerDQN(object):
 
         # Initialize lists to save execution info and RL variables
         self.reward_value_log = []
+        self.reward_episode_log = []
         self.training_loss_log = []
 
     def make_predictions(self, input_img,
@@ -68,9 +74,15 @@ class TrainerDQN(object):
 
             # Feed Forward
             if mode == 'predict':
-                shovel_out = self.shovel_model.forward(input_data, rot_idx=i)
+                shovel_out = self.shovel_model.forward(input_data,
+                                                       rot_idx=i,
+                                                       num_rotation=self.num_of_rotation,
+                                                       rotation_range=self.rotation_range)
             else:
-                shovel_out = self.target_model.forward(input_data, rot_idx=i)
+                shovel_out = self.target_model.forward(input_data,
+                                                       rot_idx=i,
+                                                       num_rotation=self.num_of_rotation,
+                                                       rotation_range=self.rotation_range)
 
             shovel_prediction = shovel_out[0][0].cpu().data.detach().numpy()
             pad_start = int((shovel_prediction.shape[0] - output_size) / 2)
@@ -80,17 +92,21 @@ class TrainerDQN(object):
 
     def get_label_value(self,
                         shovel_success,
-                        next_img_input):
+                        next_img_input,
+                        is_terminate):
         # Compute current reward
         if shovel_success:
             current_reward = 1.0
         else:
             current_reward = 0.0
-        next_shovel_predictions = self.make_predictions(next_img_input,
-                                                        output_size=self.action_space_size,
-                                                        requires_grad=False,
-                                                        mode='target')
-        future_reward = np.amax(next_shovel_predictions)
+        if is_terminate:
+            future_reward = 0.
+        else:
+            next_shovel_predictions = self.make_predictions(next_img_input,
+                                                            output_size=self.action_space_size,
+                                                            requires_grad=False,
+                                                            mode='target')
+            future_reward = np.amax(next_shovel_predictions)
         expected_reward = current_reward + self.future_reward_discount * future_reward
         print('Expected reward: %f + %f x %f = %f' % (current_reward,
                                                       self.future_reward_discount,
@@ -103,17 +119,31 @@ class TrainerDQN(object):
                       action_position,
                       output_size,
                       label_value,
-                      prev_mask):
+                      prev_mask,
+                      weight_scale=1e-1):
+        """
+        KIDQN Update
+        :param input_img:   Input to the visual affordance network
+        :param rot_idx:     The rotation_idx
+        :param action_position:     in the action space
+        :param output_size:
+        :param label_value:     Computed DQN update label
+        :param prev_mask:       Action mask
+        :param weight_scale:    Balance factor of the label_value gradient and the knowledge gradient
+        :return:
+        """
         self.shovel_optimizer.zero_grad()
         input_data = np.asarray([input_img], dtype=np.float)
         input_data = torch.from_numpy(input_data).permute(0, 3, 1, 2).to(self.device, dtype=torch.float)
         input_data.requires_grad = True
         shovel_predictions = self.shovel_model.forward(input_data,
-                                                       rot_idx=rot_idx)
+                                                       rot_idx=rot_idx,
+                                                       num_rotation=self.num_of_rotation,
+                                                       rotation_range=self.rotation_range)
 
         label_numpy = shovel_predictions.clone().cpu().data.detach().numpy()
         # -------
-        weight = 1e-1
+        weight = weight_scale
         label_weights = np.ones_like(label_numpy) * weight
         # -------
         pad_width = int((label_numpy.shape[2] - output_size) / 2)
@@ -148,30 +178,55 @@ class TrainerDQN(object):
         print('Target Model Updated')
 
 
-def get_prediction_vis(predictions, color_heightmap, action_rot, action_position, num_rotation=3):
+def get_prediction_vis(predictions,
+                       color_heightmap,
+                       action_rot,
+                       action_position,
+                       num_rotation=3,
+                       rotate_angle_range=90.):
     canvas = None
     tmp_row_canvas = None
     zoom_scale = float(color_heightmap.shape[0])/predictions.shape[1]
-    for canvas_col in range(num_rotation):
-        rotate_idx = canvas_col
-        prediction_vis = predictions[rotate_idx,:,:].copy()
-        prediction_vis = ndimage.zoom(prediction_vis, zoom=[zoom_scale, zoom_scale], mode='nearest')
-        prediction_vis = np.clip(prediction_vis, 0, 5)
-        prediction_vis = cv2.applyColorMap((prediction_vis*255).astype(np.uint8), cv2.COLORMAP_JET)
-        prediction_vis = (0.5*cv2.cvtColor(color_heightmap, cv2.COLOR_RGB2BGR) + 0.5*prediction_vis).astype(np.uint8)
+    for rotate_idx in range(num_rotation):
+        prediction_vis = predictions[rotate_idx, :, :].copy()
+        # ========
+        # prediction_vis = np.clip(prediction_vis, 0, 1)
+        scale = max(np.amax(prediction_vis), 1)
+        prediction_vis = prediction_vis / (1.05 * scale)
+        prediction_vis = np.clip(prediction_vis, 0, 1)
+        # ========
+        prediction_vis = ndimage.zoom(prediction_vis,
+                                      zoom=[zoom_scale, zoom_scale],
+                                      mode='constant',
+                                      prefilter=False)
+        # scale = max(np.amax(prediction_vis), 1)
+        # prediction_vis = prediction_vis / (1.05 * scale)
+        # prediction_vis = np.clip(prediction_vis, 0, 5)
+        prediction_vis = cv2.applyColorMap((prediction_vis*200).astype(np.uint8), cv2.COLORMAP_JET)
+        prediction_vis = (0.4*cv2.cvtColor(color_heightmap, cv2.COLOR_RGB2BGR) + 0.6*prediction_vis).astype(np.uint8)
         if rotate_idx == action_rot:
             cv2.circle(prediction_vis,
                        (int(action_position[1] * zoom_scale - int(zoom_scale/2)),
                         int(action_position[0] * zoom_scale - int(zoom_scale/2))),
                        15, (255, 0, 0), 8)
-        prediction_vis = ndimage.rotate(prediction_vis, rotate_idx * 45., reshape=False)
+        prediction_vis = ndimage.rotate(prediction_vis,
+                                        rotate_angle_range * rotate_idx / (num_rotation-1),
+                                        reshape=False)
         prediction_vis = cv2.flip(prediction_vis, 0)
+        prediction_vis = ndimage.rotate(prediction_vis,
+                                        -90,
+                                        reshape=False)
+        # prediction_vis = ndimage.rotate(prediction_vis,
+        #                                 180,
+        #                                 reshape=False)
         if tmp_row_canvas is None:
             tmp_row_canvas = prediction_vis
         else:
-            tmp_row_canvas = np.concatenate((tmp_row_canvas,prediction_vis), axis=1)
+            tmp_row_canvas = np.concatenate((tmp_row_canvas,
+                                             prediction_vis), axis=1)
     if canvas is None:
         canvas = tmp_row_canvas
     else:
-        canvas = np.concatenate((canvas,tmp_row_canvas), axis=0)
+        canvas = np.concatenate((canvas,
+                                 tmp_row_canvas), axis=0)
     return canvas

@@ -9,7 +9,7 @@ from pycocotools.coco import COCO
 import pycocotools.mask as mask_util
 
 from collections import defaultdict
-import maskrcnn_training.utils
+import maskrcnn_training.utils as utils
 
 
 class CocoEvaluator(object):

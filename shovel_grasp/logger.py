@@ -31,11 +31,13 @@ class Logger():
         self.transitions_directory = os.path.join(self.base_directory, 'transitions')
         self.models_directory = os.path.join(self.transitions_directory, 'DQN_models')
 
-        # -------- Voxel method additional saver ---------------------------
+        # -------- transition save dir ---------------------------
         self.action_dir = os.path.join(self.transitions_directory, 'actions')
         self.mask_dir = os.path.join(self.transitions_directory, 'mask')
         self.grasp_success_dir = os.path.join(self.transitions_directory, 'grasp-success')
         self.training_loss_dir = os.path.join(self.transitions_directory, 'training_loss')
+        self.terminate_state_dir = os.path.join(self.transitions_directory, 'is-terminate')
+        self.episode_reward_dir = os.path.join(self.transitions_directory, 'episode-reward-log')
 
         if not os.path.exists(self.info_directory):
             os.makedirs(self.info_directory)
@@ -58,6 +60,10 @@ class Logger():
             os.makedirs(self.action_dir)
         if not os.path.exists(self.grasp_success_dir):
             os.makedirs(self.grasp_success_dir)
+        if not os.path.exists(self.terminate_state_dir):
+            os.makedirs(self.terminate_state_dir)
+        if not os.path.exists(self.episode_reward_dir):
+            os.mkdir(self.episode_reward_dir)
 
     def save_camera_info(self, intrinsics, pose, depth_scale):
         np.savetxt(os.path.join(self.info_directory, 'camera-intrinsics.txt'), intrinsics, delimiter=' ')

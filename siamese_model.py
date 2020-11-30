@@ -1,3 +1,4 @@
+# Old scripts to construct different CNN for siamese models
 from collections import OrderedDict
 import numpy as np
 import torch
@@ -118,6 +119,64 @@ class ResModel(nn.Module):
         out = self.linear1(out)
         out = torch.tanh(self.linear2(out))
         return out
+
+
+# class CnnNet(nn.Module):
+#     def __init__(self, in_channels):
+#         super(CnnNet, self).__init__()
+#         self.cnn1 = nn.Sequential(
+#             nn.Conv2d(in_channels, 64, kernel_size=10),
+#             nn.ReLU(inplace=True),
+#             nn.BatchNorm2d(64),
+#             nn.MaxPool2d(2),
+#
+#             # nn.ReflectionPad2d(1),
+#             nn.Conv2d(64, 128, kernel_size=8),
+#             nn.ReLU(inplace=True),
+#             nn.BatchNorm2d(128),
+#             nn.MaxPool2d(2),
+#
+#             # nn.ReflectionPad2d(1),
+#             nn.Conv2d(128, 128, kernel_size=4),
+#             nn.ReLU(inplace=True),
+#             nn.BatchNorm2d(128),
+#             nn.MaxPool2d(2),
+#
+#             nn.Conv2d(128, 256, kernel_size=4),
+#             nn.ReLU(inplace=True),
+#             nn.BatchNorm2d(256),
+#         )
+#
+#         self.fc1 = nn.Sequential(
+#             nn.Linear(256 * 12 * 12, 2056),
+#             nn.Sigmoid(),
+#         )
+#
+#         self.fc2 = nn.Sequential(
+#             nn.Linear(2056, 1),
+#             nn.Sigmoid(),
+#         )
+#         for m in self.modules():
+#             if isinstance(m, nn.Conv2d):
+#                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+#             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+#                 nn.init.constant_(m.weight, 1)
+#                 nn.init.constant_(m.bias, 0)
+#
+#     def forward_once(self, x):
+#         output = self.cnn1(x)
+#         # print(output.size())
+#         output = output.view(output.size()[0], -1)
+#         # print(output.size())
+#         output = self.fc1(output)
+#         return output
+#
+#     def forward(self, input1, input2):
+#         output1 = self.forward_once(input1)
+#         output2 = self.forward_once(input2)
+#         dis = torch.abs(output1 - output2)
+#         out = self.fc2(dis)
+#         return out
 
 
 class TripletLoss(nn.Module):

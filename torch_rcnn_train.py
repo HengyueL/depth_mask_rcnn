@@ -1,3 +1,5 @@
+# This is the script to train the mask-rcnn network with the considered sd mask rcnn dataset
+# Dataset can be obtained here: https://sites.google.com/view/wisdom-dataset/dataset_links
 from maskrcnn_training.engine import train_one_epoch, evaluate
 import torch
 import os
@@ -11,9 +13,8 @@ import matplotlib.pyplot as plt
 from testrcnn import instance_segmentation_api
 from PIL import Image
 
-
-save_model_dir = 'save_file_dir/pytorch_gdl_test'
-# save_model_dir = 'save_file_dir/pytorch_gdd_test'
+# Model save path
+save_model_dir = 'save_file_dir/pytorch_gdd_test'
 if not os.path.exists(save_model_dir):
     os.mkdir(save_model_dir)
 
@@ -25,28 +26,22 @@ def main():
     # our dataset has two classes only - background and person
     num_classes = 2
     # use our dataset and defined transformations
-    # dataset = SdMaskDataSet('datasets/sim_img',
-    #                         is_train=True,
-    #                         transforms=get_transform(train=True))
-    dataset = SdMaskDataSet('datasets/low-res',
+    dataset = SdMaskDataSet('datasets/low-res',  # Point to the folder the dataset images are stored
                             is_train=True,
                             transforms=get_transform(train=True))
     dataset_test = SdMaskDataSet('datasets/low-res',
                                  is_train=False,
                                  transforms=get_transform(train=False))
-    # dataset_test = SdMaskDataSet('datasets/sim_img', get_transform(train=False))
 
     # split the dataset in train and test set
     indices = torch.randperm(len(dataset)).tolist()
     dataset = torch.utils.data.Subset(dataset, indices[:-50])
-    # dataset = torch.utils.data.Subset(dataset, indices[0:350])
     dataset_test = torch.utils.data.Subset(dataset_test, indices[-50:])
 
     # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
         dataset, batch_size=2, shuffle=True, num_workers=4,
         collate_fn=utils.collate_fn)
-
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test, batch_size=1, shuffle=False, num_workers=1,
         collate_fn=utils.collate_fn)
@@ -54,17 +49,12 @@ def main():
     # get the model using our helper function
     model = get_model_instance_segmentation(num_classes,
                                             pretrained=True)
-
     # move model to the right device
     model.to(device, dtype=torch.float)
-
     # construct an optimizer
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, lr=5e-3,
                                 momentum=0.9, weight_decay=5e-4)
-    # optimizer = torch.optim.SGD(params, lr=1e-3,
-    #                             momentum=0.9)
-
     # and a learning rate scheduler
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                    step_size=3,
@@ -87,7 +77,10 @@ def main():
 
 
 def test_eval():
-    depth_dir = 'datasets/low-res/depth_ims'
+    """
+    Evaluation of the trained Mask-RCNN network based on the WISDOM dataset
+    """
+    depth_dir = 'datasets/low-res/depth_ims'    # Point to the path of the WISDOM dataset
     rgb_dir = 'datasets/low-res/color_ims'
 
     # # img_file = os.path.join(root_dir, 'image_000000.png')
@@ -96,31 +89,30 @@ def test_eval():
     rgb_array = np.asarray(Image.open(rgb_img_file).convert("RGB"))
     depth_array = np.asarray(Image.open(depth_img_file).convert("RGB"))[:,:,0]
 
-    # depth_array = np.load('depth.npy')
-    # rgb_array = np.load('rgb.npy')
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model_path = os.path.join(save_model_dir,
                               '%d.pth' % 29)
     # ==== Normalize depth
     depth_array = depth_array / np.amax(depth_array)
-    # depth_array = np.pad(depth_array,
-    #                      pad_width=[100, 100])
+
     x, y = depth_array.shape
     depth_array.shape = (x, y, 1)
-    # ==== Lap
+    # ==== Depth Laplasian Channel ====
     depth_lap = ndimage.laplace(depth_array)
-    # ==== RGB to Gray
+    # ==== RGB to Gray ====
     gray_data = rgb2gray(rgb_array)
-    # gray_data = np.pad(gray_data,
-    #                    pad_width=[100, 100])
+
     gray_data.shape = (x, y, 1)
     # ==== Construch Input Data
-    # input_data = np.concatenate((gray_data,
-    #                              depth_array,
-    #                              depth_array), axis=2)
+    # ==== Different Channel Choices
     input_data = np.concatenate((gray_data,
                                  depth_array,
-                                 depth_lap), axis=2)
+                                 depth_array), axis=2)
+    # input_data = np.concatenate((gray_data,
+    #                              depth_array,
+    #                              depth_lap), axis=2)
+    # =========
     input_data = np.transpose(input_data, [2, 0, 1])
     input_data = torch.from_numpy(input_data).to(device=device,
                                                  dtype=torch.float)

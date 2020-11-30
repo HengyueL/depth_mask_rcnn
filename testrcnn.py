@@ -1,3 +1,4 @@
+# This Script Contains the utility functions for the mask-rcnn result visualization
 import cv2
 import numpy as np
 import random
