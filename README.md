@@ -32,4 +32,4 @@ major requirements:
     
     The Old Version Pretrained mask rcnn model and siamese model can be found here：
         https://drive.google.com/drive/folders/1ZwVBn2oMX2K-GyxsHjzFBVELFxk7H3Z7?usp=sharing
-      whose path should cover 'save_model_dir'
+    Both models should locate under the path 'save_model_dir'
