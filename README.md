@@ -4,10 +4,13 @@ This repository include three part:
   1) Gray-depth-depth mask rcnn for object-agnostic segmentation for table top manipulations
   2) Siamese network to identify target object
   3) Shovel-and-Grasp experiment.
+  
+# Prerequisite:
+  A conda virtual environment created with project root 'SaG_and_maskRCNN'.
 
 # Dependencies:
     General requirement:
-        1) Numpy; PyTorch version 1.5.0
+        1) Numpy; PyTorch version 1.5.0 with cuda
         2) CoppeliaSim (Vrep) version 4.0.0 
         3) scipy
         4) matplotlib
@@ -60,4 +63,6 @@ This repository include three part:
       3) The visual affordance network model should be put under path specified by variable 'model_logger_dir' in the main function.
   
   4) For future work of using a Siamese Network (using image patch as input, not the entire workspace heightmap size), the siamese network related code in 'main_kidqn' and            'siamese_model.py' must be modified accordingly.
+    
+    
     
